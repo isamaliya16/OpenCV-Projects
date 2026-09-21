@@ -121,8 +121,6 @@ tests/               Automated tests
 | Face boxes look too strict or too loose | Change *Face confidence* under *Detection settings*. |
 | Details of any failure | Read the console window where you started the app; errors are logged there, not shown on the page. |
 
-## Licence note
 
-Ultralytics YOLO and the YOLO26 weights are licensed under **AGPL-3.0** (a commercial licence is available from
-Ultralytics). If you offer this app to other people over a network, AGPL obligations apply to you. The YuNet face
-model comes from the OpenCV Model Zoo (MIT licence). This is not legal advice.
+
+=-
