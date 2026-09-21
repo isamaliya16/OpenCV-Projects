@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VisionScan - Object and face detection</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body data-max-bytes="{{ max_bytes }}">
+
+<header>
+  <div class="brand">
+    <b aria-hidden="true">V</b>
+    <div><strong>VisionScan</strong><small>Object and face detection</small></div>
+  </div>
+  <span id="status" class="status" data-state="unknown" data-url="{{ url_for('health') }}"
+        role="status" aria-live="polite">&#9679; Checking models&hellip;</span>
+</header>
+
+<main>
+  {% for message in get_flashed_messages() %}
+    <div class="alert" role="alert">{{ message }}</div>
+  {% endfor %}
+
+  {% if not result %}
+  <!-- ------------------------------------------------------------ upload -->
+  <section class="hero">
+    <p class="eyebrow">AI image analysis</p>
+    <h1>Find objects and faces<br>in any photo</h1>
+    <p class="lead">Upload an image and get every detected object and face, each with a confidence score.</p>
+
+    <form id="scanForm" method="post" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+      <label class="drop" id="drop" for="image">
+        <input id="image" class="visually-hidden" name="image" type="file"
+               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+        <span class="icon" aria-hidden="true">&uarr;</span>
+        <strong>Choose an image or drag it here</strong>
+        <small>JPG, JPEG, PNG or WEBP, up to {{ max_label }}</small>
+        <img id="preview" class="preview" alt="Preview of the selected image" hidden>
+        <span id="fileName" class="file-name">No file selected</span>
+      </label>
+      <p id="clientMsg" class="client-msg" role="alert" hidden></p>
+
+      <details class="settings">
+        <summary>Detection settings</summary>
+        <div class="setting">
+          <label for="object_conf">Object confidence <output id="object_conf_out" for="object_conf"></output></label>
+          <input id="object_conf" name="object_conf" type="range" min="5" max="95" step="5"
+                 value="{{ object_default }}" data-out="object_conf_out">
+          <small>Lower finds more objects but adds false alarms.</small>
+        </div>
+        <div class="setting">
+          <label for="face_conf">Face confidence <output id="face_conf_out" for="face_conf"></output></label>
+          <input id="face_conf" name="face_conf" type="range" min="5" max="95" step="5"
+                 value="{{ face_default }}" data-out="face_conf_out">
+          <small>Lower finds small or partly hidden faces.</small>
+        </div>
+      </details>
+
+      <button id="scan" class="btn primary" type="submit"><span>Start AI Scan</span></button>
+      <div id="progress" class="progress" hidden>
+        <div class="bar"></div>
+        <p>Analyzing image&hellip; the first scan can take longer while models load.</p>
+      </div>
+    </form>
+  </section>
+
+  {% else %}
+  <!-- ------------------------------------------------------------ result -->
+  {% for warning in result.warnings %}
+    <div class="notice" role="status">{{ warning }}</div>
+  {% endfor %}
+
+  <section class="head">
+    <div>
+      <p class="eyebrow">Scan complete</p>
+      <h1>Detection result</h1>
+      <p class="file-name">{{ result.original_name }}</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('result_download', rid=result.id) }}">Download result</a>
+      <form method="post" action="{{ url_for('result_delete', rid=result.id) }}"
+            data-confirm="Delete this result now?">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn ghost" type="submit">Delete result</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card image">
+      <p class="eyebrow">Annotated image</p>
+      <img src="{{ url_for('result_image', rid=result.id) }}"
+           width="{{ result.image_width }}" height="{{ result.image_height }}"
+           alt="Photo with {{ result.object_count }} detected objects and {{ result.face_count }} faces outlined">
+    </div>
+
+    <aside>
+      <div class="stats">
+        <div><strong>{{ result.total }}</strong><span>Detections</span></div>
+        <div><strong>{{ result.object_count }}</strong><span>Objects</span></div>
+        <div><strong>{{ result.face_count }}</strong><span>Faces</span></div>
+      </div>
+
+      {% if result.summary %}
+      <div class="card">
+        <p class="eyebrow">Objects found</p>
+        <div class="chips">
+          {% for item in result.summary %}
+            <span class="chip">{{ item.label|title }} <b>&times;{{ item.count }}</b></span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card list">
+        <p class="eyebrow">Details</p>
+        {% for d in result.detections %}
+          <div class="row">
+            <span><i class="dot {{ d.type }}" aria-hidden="true"></i>{{ d.label|title }}</span>
+            <strong>{{ '%.0f'|format(d.confidence * 100) }}%</strong>
+          </div>
+        {% else %}
+          <p class="empty">Nothing found at these settings. Try scanning again with a lower confidence.</p>
+        {% endfor %}
+      </div>
+
+      <a class="again" href="{{ url_for('index') }}">&larr; Scan another image</a>
+    </aside>
+  </section>
+  {% endif %}
+</main>
+
+<footer>
+  Your original upload is never stored. Results are deleted automatically after {{ result_ttl }} minutes.
+</footer>
+
+</body>
+</html>

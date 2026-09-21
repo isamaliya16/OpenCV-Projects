@@ -1,0 +1,15 @@
+# virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# generated at run time
+results/*
+!results/.gitkeep
+*.part
+
+# model files are large; download_models.py fetches them
+models/*.onnx
+models/*.pt
