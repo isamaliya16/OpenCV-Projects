@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% from "_macros.html" import brand %}
+{% block title %}Dashboard - FaceKey{% endblock %}
+{% block body_class %}dash-page{% endblock %}
+
+{% block body %}
+<header class="topbar">
+  {{ brand() }}
+  <div class="topbar-right">
+    <span class="timer" title="Your session ends automatically">
+      Session ends in <strong id="countdown" data-seconds="{{ seconds_left }}">--:--</strong>
+    </span>
+    <span class="user-chip">
+      <span class="avatar" aria-hidden="true">{{ initials }}</span>
+      <span class="user-name">{{ user.display_name }}</span>
+    </span>
+    <form method="post" action="{{ url_for('aperture.logout') }}">
+      <button type="submit" class="btn btn-quiet">Sign out</button>
+    </form>
+  </div>
+</header>
+
+<main class="dash">
+
+  <section class="hello">
+    <h1>Welcome back, {{ first_name }}</h1>
+    <p>Your face was verified on
+      <time class="js-time" datetime="{{ verified_at }}">{{ verified_at }}</time>
+      after {{ verified_frames }} camera frames, as <strong>@{{ user.username }}</strong>.</p>
+  </section>
+
+  <section class="verdict" aria-labelledby="verdict-title">
+    <div class="verdict-main">
+      <h2 id="verdict-title">Why you were let in</h2>
+      <p class="verdict-copy">
+        The camera image of your face was compared against every registered account and scored
+        <strong>{{ '%.1f'|format(verified_distance) if verified_distance is not none else 'n/a' }}</strong>
+        against yours — the closest of everyone enrolled. Any score up to {{ '%d'|format(threshold) }} is accepted. Lower means a closer match.
+      </p>
+
+      <div class="gauge" id="gauge"
+           data-distance="{{ verified_distance if verified_distance is not none else 0 }}"
+           data-limit="{{ threshold }}">
+        <div class="gauge-track">
+          <span class="gauge-ok"></span>
+          <span class="gauge-no"></span>
+          <span class="gauge-marker"><b>{{ '%.1f'|format(verified_distance) if verified_distance is not none else '' }}</b></span>
+        </div>
+        <div class="gauge-scale">
+          <span>0</span>
+          <span class="gauge-limit">{{ '%d'|format(threshold) }} accepted up to here</span>
+          <span>{{ '%d'|format(threshold * 2) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <dl class="facts">
+      <div><dt>Detection</dt><dd>Haar cascade</dd></div>
+      <div><dt>Recognition</dt><dd>LBPH</dd></div>
+      <div><dt>Your enrolled photos</dt><dd>{{ user.sample_count }}</dd></div>
+      <div><dt>Registered accounts</dt><dd>{{ total_users }}</dd></div>
+      <div><dt>Matches needed</dt><dd>{{ required }} in a row</dd></div>
+      <div><dt>Member since</dt><dd><time class="js-time" datetime="{{ user.created_at }}">{{ user.created_at }}</time></dd></div>
+    </dl>
+  </section>
+
+  <section class="stats" aria-label="Sign-in totals">
+    <div class="stat"><span class="stat-num">{{ stats.success }}</span><span class="stat-label">Successful sign-ins</span></div>
+    <div class="stat"><span class="stat-num">{{ stats.failed }}</span><span class="stat-label">Failed attempts on your account</span></div>
+    <div class="stat">
+      <span class="stat-num stat-num-sm">
+        {% if stats.previous_success %}<time class="js-time" datetime="{{ stats.previous_success }}">{{ stats.previous_success }}</time>{% else %}First sign-in{% endif %}
+      </span>
+      <span class="stat-label">Previous sign-in</span>
+    </div>
+  </section>
+
+  <section class="history" aria-labelledby="history-title">
+    <h2 id="history-title">Sign-in activity</h2>
+    <p class="history-note">Only sign-ins that resembled your account most closely appear here.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">When</th><th scope="col">Result</th><th scope="col">Score</th><th scope="col">Frames</th><th scope="col">From</th></tr>
+        </thead>
+        <tbody>
+        {% for e in events %}
+          <tr>
+            <td><time class="js-time" datetime="{{ e.ts }}">{{ e.ts }}</time></td>
+            <td>
+              {% if e.event == 'success' %}<span class="pill pill-ok">Signed in</span>
+              {% elif e.event == 'failed' %}<span class="pill pill-bad">Face not recognised</span>
+              {% elif e.event == 'locked' %}<span class="pill pill-warn">Locked for a while</span>
+              {% else %}<span class="pill pill-muted">Timed out</span>{% endif %}
+            </td>
+            <td>{{ '%.1f'|format(e.distance) if e.distance is not none else '-' }}</td>
+            <td>{{ e.frames if e.frames is not none else '-' }}</td>
+            <td>{{ e.ip or '-' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">No activity yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="account" aria-labelledby="account-title">
+    <h2 id="account-title">Account details</h2>
+
+    <form class="panel account-panel" id="accountForm">
+      <div class="account-row">
+        <div class="field">
+          <label for="aUsername">Username</label>
+          <input id="aUsername" type="text" value="{{ user.username }}" disabled>
+        </div>
+        <div class="field">
+          <label for="aName">Full name</label>
+          <input id="aName" name="display_name" type="text" value="{{ user.display_name }}" required>
+          <p class="field-error" id="aNameError" hidden></p>
+        </div>
+        <div class="field">
+          <label for="aEmail">Email</label>
+          <input id="aEmail" name="email" type="email" value="{{ user.email or '' }}" placeholder="Not set">
+          <p class="field-error" id="aEmailError" hidden></p>
+        </div>
+      </div>
+      <div class="account-actions">
+        <button type="submit" class="btn btn-primary" id="accountSave">Save changes</button>
+        <span class="save-note" id="accountSaved" hidden>Saved.</span>
+      </div>
+    </form>
+
+    <div class="panel danger-panel">
+      <div>
+        <h3>Delete account</h3>
+        <p>Removes your profile, your enrolled face photos, and retrains the recognition
+           model without them. This can't be undone.</p>
+      </div>
+      <button type="button" class="btn btn-danger" id="deleteAccount">Delete my account</button>
+    </div>
+  </section>
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import brand %}
+{% block title %}Sign in - FaceKey{% endblock %}
+{% block body_class %}login-page{% endblock %}
+
+{% block body %}
+<main class="login">
+
+  <header class="login-head">
+    {{ brand() }}
+    <h1>Sign in with your face</h1>
+    <p class="lede">Look at the camera and hold still for a few seconds. We compare what the camera sees against registered accounts. Camera frames are checked in memory and never saved.</p>
+
+    {% if just_registered %}
+      <p class="banner banner-ok">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>
+        Account created{{ " for " + registered_name if registered_name else "" }}. Sign in with your face to continue.
+      </p>
+    {% endif %}
+
+    <p class="switch-link">New here? <a href="{{ url_for('aperture.register') }}">Create an account</a></p>
+  </header>
+
+  <section class="stage-col" aria-label="Face verification">
+    <div class="stage" id="stage" data-state="idle" data-has-users="{{ 'true' if has_users else 'false' }}">
+      <video id="video" autoplay muted playsinline aria-label="Live camera preview"></video>
+
+      <div class="veil" id="veil">
+        <svg class="veil-icon" viewBox="0 0 64 64" width="72" height="72" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 22v-6a4 4 0 0 1 4-4h6M42 12h6a4 4 0 0 1 4 4v6M52 42v6a4 4 0 0 1-4 4h-6M22 52h-6a4 4 0 0 1-4-4v-6"/>
+          <path d="M25 27v4M39 27v4M32 30v7h-3M25 43c3.5 3 10.5 3 14 0"/>
+        </svg>
+        <p id="veil-text">{{ "Camera is off" if has_users else "No one is registered yet" }}</p>
+      </div>
+
+      <div class="sweep" aria-hidden="true"></div>
+
+      <div class="face-box" id="faceBox" hidden aria-hidden="true">
+        <i></i><i></i><i></i><i></i>
+      </div>
+
+      <div class="done" id="done" aria-hidden="true">
+        <svg viewBox="0 0 52 52" width="52" height="52" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 27l9 9 17-19"/></svg>
+      </div>
+    </div>
+
+    <div class="meter" id="meter" data-required="{{ required }}" role="progressbar" aria-label="Verification progress" aria-valuemin="0" aria-valuemax="{{ required }}" aria-valuenow="0"></div>
+
+    {% if has_users %}
+      <p class="status" id="status" role="status" aria-live="polite">Press Start camera to begin.</p>
+      <p class="detail" id="detail"></p>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="action">Start camera</button>
+      </div>
+    {% else %}
+      <p class="status" role="status">No accounts exist on this system yet.</p>
+      <p class="detail">Create the first account to sign in with your face.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="{{ url_for('aperture.register') }}">Create an account</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <ol class="steps" aria-label="Sign-in progress">
+    <li class="step" id="step-camera" data-status="pending">
+      <span class="step-mark"><span class="n">1</span><svg class="tick" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></span>
+      <div class="step-text"><strong>Turn on your camera</strong><span>Allow access when your browser asks.</span></div>
+    </li>
+    <li class="step" id="step-face" data-status="pending">
+      <span class="step-mark"><span class="n">2</span><svg class="tick" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></span>
+      <div class="step-text"><strong>Get your face in view</strong><span>Face the camera in even light.</span></div>
+    </li>
+    <li class="step" id="step-verified" data-status="pending">
+      <span class="step-mark"><span class="n">3</span><svg class="tick" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></span>
+      <div class="step-text"><strong>Hold still</strong><span>We need {{ required }} clear matches in a row — from one account.</span></div>
+    </li>
+  </ol>
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% if has_users %}<script src="{{ url_for('static', filename='js/login.js') }}"></script>{% endif %}
+{% endblock %}
+

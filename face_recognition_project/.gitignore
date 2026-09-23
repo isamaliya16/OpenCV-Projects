@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# per-deployment runtime state (secret key, audit log)
+webapp/data/*
+!webapp/data/.gitkeep

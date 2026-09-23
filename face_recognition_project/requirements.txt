@@ -1,0 +1,10 @@
+opencv-contrib-python
+numpy
+
+# --- web app (webapp/) ---
+Flask>=3.0
+Werkzeug>=3.0
+
+# --- tests (tests/) ---
+pytest>=8.0
+scikit-image>=0.22   # provides a bundled sample photo used as a "stranger" face in tests
